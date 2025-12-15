@@ -27,8 +27,7 @@ WORKDIR ${HOME}
 RUN pip install -U pip setuptools wheel \
     && pip install numpy pandas \
     && pip install vnpy \
-    && pip install vnpy_ctastrategy --no-deps \
-    && pip install vnpy_sqlite vnpy_csvloader
+    && pip install vnpy_ctastrategy --no-deps
 
 # ===== VNC 目录 =====
 RUN mkdir -p ${HOME}/.vnc \
