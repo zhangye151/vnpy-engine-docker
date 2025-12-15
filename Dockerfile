@@ -31,14 +31,13 @@ RUN apt-get update && apt-get install -y \
     libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-# ===== Python 依赖 =====
+# ===== Python 依赖（CI 稳定版）=====
 RUN pip install -U pip setuptools wheel
 RUN pip install numpy pandas
-RUN pip install \
-    vnpy \
-    vnpy_ctastrategy \
-    vnpy_sqlite \
-    vnpy_csvloader
+
+RUN pip install vnpy
+RUN pip install vnpy_ctastrategy --no-deps
+RUN pip install vnpy_sqlite vnpy_csvloader
 
 # ===== VNC 初始化 =====
 RUN mkdir -p /root/.vnc && \
