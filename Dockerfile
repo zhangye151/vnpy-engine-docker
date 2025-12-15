@@ -1,5 +1,9 @@
 FROM python:3.10-bullseye
 
+# ===== 禁止 apt 交互（非常关键）=====
+ENV DEBIAN_FRONTEND=noninteractive
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+
 # ===== 基础环境 =====
 ENV TZ=Asia/Shanghai
 ENV USER=root
@@ -13,14 +17,13 @@ ENV VNC_PASSWORD=123456
 # ===== vn.py 数据目录 =====
 ENV VNPY_HOME=/root/.vntrader
 
-# ===== 系统依赖（关键！）=====
+# ===== 系统依赖 =====
 RUN apt-get update && apt-get install -y \
     xfce4 xfce4-terminal \
     tightvncserver \
     dbus-x11 \
     python3-pyqt5 \
     python3-pyqt5.qtsvg \
-    python3-pyqt5.qtwebengine \
     git \
     build-essential \
     libgl1 \
@@ -28,13 +31,9 @@ RUN apt-get update && apt-get install -y \
     libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-# ===== Python 依赖（分步安装，避免失败）=====
+# ===== Python 依赖 =====
 RUN pip install -U pip setuptools wheel
-
-# numpy / pandas 先装，避免编译地狱
 RUN pip install numpy pandas
-
-# vn.py 本体 + 官方模块
 RUN pip install \
     vnpy \
     vnpy_ctastrategy \
@@ -51,7 +50,6 @@ RUN mkdir -p /root/.vnc && \
 EXPOSE 5901
 WORKDIR /root
 
-# ===== 启动 =====
 CMD sh -c "\
     rm -rf /tmp/.X1-lock /root/.vnc/*.pid || true && \
     vncserver :1 -geometry ${VNC_RESOLUTION} -depth ${VNC_COL_DEPTH} && \
