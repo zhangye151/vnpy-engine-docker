@@ -1,56 +1,42 @@
-FROM python:3.10-bullseye
+FROM python:3.10-slim
 
-# ===== 禁止 apt 交互（非常关键）=====
 ENV DEBIAN_FRONTEND=noninteractive
-RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
 
-# ===== 基础环境 =====
-ENV TZ=Asia/Shanghai
-ENV USER=root
-ENV DISPLAY=:1
-
-# ===== VNC / GUI =====
+# ===== 默认环境变量（可 docker run 覆盖）=====
+ENV USER=vnpy
+ENV HOME=/home/vnpy
+ENV VNC_PASSWORD=vnpy123
 ENV VNC_RESOLUTION=1280x800
-ENV VNC_COL_DEPTH=24
-ENV VNC_PASSWORD=123456
-
-# ===== vn.py 数据目录 =====
-ENV VNPY_HOME=/root/.vntrader
+ENV DISPLAY=:0
 
 # ===== 系统依赖 =====
 RUN apt-get update && apt-get install -y \
-    xfce4 xfce4-terminal \
-    tightvncserver \
+    xvfb \
+    x11vnc \
+    fluxbox \
     dbus-x11 \
-    python3-pyqt5 \
-    python3-pyqt5.qtsvg \
     git \
-    build-essential \
-    libgl1 \
-    libglib2.0-0 \
-    libstdc++6 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# ===== Python 依赖（CI 稳定版）=====
-RUN pip install -U pip setuptools wheel
-RUN pip install numpy pandas
+# ===== 用户 =====
+RUN useradd -m ${USER}
+WORKDIR ${HOME}
 
-RUN pip install vnpy
-RUN pip install vnpy_ctastrategy --no-deps
-RUN pip install vnpy_sqlite vnpy_csvloader
+# ===== Python =====
+RUN pip install -U pip setuptools wheel \
+    && pip install numpy pandas \
+    && pip install vnpy \
+    && pip install vnpy_ctastrategy --no-deps \
+    && pip install vnpy_sqlite vnpy_csvloader
 
-# ===== VNC 初始化 =====
-RUN mkdir -p /root/.vnc && \
-    echo "${VNC_PASSWORD}" | vncpasswd -f > /root/.vnc/passwd && \
-    chmod 600 /root/.vnc/passwd && \
-    printf '#!/bin/sh\nunset SESSION_MANAGER\nunset DBUS_SESSION_BUS_ADDRESS\nexec startxfce4 &\n' > /root/.vnc/xstartup && \
-    chmod +x /root/.vnc/xstartup
+# ===== VNC 目录 =====
+RUN mkdir -p ${HOME}/.vnc \
+    && chown -R ${USER}:${USER} ${HOME}
 
-EXPOSE 5901
-WORKDIR /root
+# ===== 启动脚本 =====
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-CMD sh -c "\
-    rm -rf /tmp/.X1-lock /root/.vnc/*.pid || true && \
-    vncserver :1 -geometry ${VNC_RESOLUTION} -depth ${VNC_COL_DEPTH} && \
-    vnpy \
-"
+USER ${USER}
+ENTRYPOINT ["/entrypoint.sh"]
